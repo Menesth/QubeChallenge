@@ -6,14 +6,8 @@ from sklearn.model_selection import train_test_split
 
 np.random.seed(1337)
 
-Xtraindf = pl.read_csv("Desktop/QubeChallenge/ModifiedData/TrainDataset/Trainclinical.csv")
+Xtraindf = pl.read_csv("Desktop/QubeChallenge/ModifiedData/TrainDataset/Traindataset.csv")
 ytraindf = pl.read_csv("Desktop/QubeChallenge/ModifiedData/TrainDataset/Ytrain.csv")
-
-combined = Xtraindf.with_columns([ytraindf["OS_STATUS"], ytraindf["OS_YEARS"]])
-filtered = combined.filter(~pl.col("OS_YEARS").is_null())
-
-Xtraindf = filtered.select([col for col in filtered.columns if col not in ["OS_YEARS", "OS_STATUS"]])
-ytraindf = filtered.select([col for col in filtered.columns if col in ["OS_YEARS", "OS_STATUS"]])
 
 Xtrain = Xtraindf.to_numpy()
 ytrain = np.array(
