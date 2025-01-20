@@ -115,7 +115,7 @@ def molecular_data_engineering(path, traindata=True):
     
     df = df.group_by("ID").agg([
             *[pl.col(col).mean().alias(col) for col in cont_columns],
-            *[pl.col(col).max().alias(col) for col in disc_columns]
+            *[pl.col(col).sum().alias(col) for col in disc_columns]
             ])
     
     for c in cont_columns:
