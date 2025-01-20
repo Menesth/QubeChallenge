@@ -15,8 +15,7 @@ ytrain = np.array(
     dtype=[("event", "bool"), ("time", "float64")]
 )
 
-Xtr, Xval, ytr, yval = train_test_split(Xtrain, ytrain, test_size=0.3, random_state=1337)
-
+Xtr, Xval, ytr, yval = train_test_split(Xtrain, ytrain, test_size=0.2, random_state=1337)
 
 model = CoxPHSurvivalAnalysis(ties="efron", alpha=1e-3, n_iter=100)
 model.fit(Xtr, ytr)
