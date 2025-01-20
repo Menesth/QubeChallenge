@@ -17,7 +17,7 @@ ytrain = np.array(
 
 Xtr, Xval, ytr, yval = train_test_split(Xtrain, ytrain, test_size=0.2, random_state=1337)
 
-model = CoxPHSurvivalAnalysis(ties="efron", alpha=1e-3, n_iter=100)
+model = CoxPHSurvivalAnalysis(alpha=1e-3, n_iter=100)
 model.fit(Xtr, ytr)
 
 cox_cindex_train = concordance_index_ipcw(ytr, ytr, model.predict(Xtr), tau=2)[0]
