@@ -19,18 +19,21 @@ ytrain = np.array(
     dtype=[("event", "bool"), ("time", "float64")]
 )
 
+print(Xtrain.shape[1])
+exit()
+
 Xtr, Xval, ytr, yval = train_test_split(Xtrain, ytrain, test_size=0.25, random_state=1337)
 
 GBSAmodel = GradientBoostingSurvivalAnalysis(
-                                            n_estimators=100,
-                                            learning_rate=0.1,
-                                            max_depth=3,
-                                            min_samples_split=2,
-                                            min_samples_leaf=1,
-                                            dropout_rate=0,
-                                            max_features="sqrt",
-                                            random_state=1337
-                                            )
+                                n_estimators=100,
+                                learning_rate=0.1,
+                                max_depth=3,
+                                min_samples_split=2,
+                                min_samples_leaf=1,
+                                dropout_rate=0,
+                                max_features="sqrt",
+                                random_state=1337
+                                )
 RFSAmodel = RandomSurvivalForest(
                                 n_estimators=100,
                                 max_depth=None,
@@ -42,9 +45,9 @@ RFSAmodel = RandomSurvivalForest(
                                 random_state=1337
                                 )
 CoxPHmodel = CoxPHSurvivalAnalysis(
-                                    alpha=1e-3,
-                                    ties="efron",
-                                    n_iter=100
+                                alpha=1e-3,
+                                ties="efron",
+                                n_iter=100
                                 )
 Coxnetmodel = CoxnetSurvivalAnalysis(
                                 n_alphas=100,
@@ -52,7 +55,7 @@ Coxnetmodel = CoxnetSurvivalAnalysis(
                                 l1_ratio=0.5,
                                 penalty_factor=None,
                                 max_iter=100000
-                            )
+                                )
 
 GBSAmodel.fit(Xtr, ytr)
 RFSAmodel.fit(Xtr, ytr)

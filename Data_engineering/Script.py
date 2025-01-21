@@ -17,6 +17,8 @@ def clinical_data_engineering(path):
 
     df = df.with_columns([
         (pl.col("CYTOGENETICS").str.contains('del')).cast(pl.Int64).alias("del"),
+        (pl.col("CYTOGENETICS").str.contains('der')).cast(pl.Int64).alias("der"),
+        (pl.col("CYTOGENETICS").str.contains('add')).cast(pl.Int64).alias("add"),
         (pl.col("CYTOGENETICS").str.contains('dup')).cast(pl.Int64).alias("dup"),
         (pl.col("CYTOGENETICS").str.contains('t')).cast(pl.Int64).alias("tr"),
         (pl.col("CYTOGENETICS").str.contains('inv')).cast(pl.Int64).alias("inv"),
@@ -24,20 +26,27 @@ def clinical_data_engineering(path):
         (pl.col("CYTOGENETICS").str.contains(r'i')).cast(pl.Int64).alias("iso"),
         (pl.col("CYTOGENETICS").str.contains('mar')).cast(pl.Int64).alias("mar"),
         (pl.col("CYTOGENETICS").str.contains('r')).cast(pl.Int64).alias("ring"),
-        (pl.col("CYTOGENETICS").str.contains(r'\-')).cast(pl.Int64).alias("subs"),
-        (pl.col("CYTOGENETICS").str.contains(r'\+')).cast(pl.Int64).alias("add")
+        (pl.col("CYTOGENETICS").str.contains(r'\-')).cast(pl.Int64).alias("subs_"),
+        (pl.col("CYTOGENETICS").str.contains(r'\+')).cast(pl.Int64).alias("add_")
         ])
-    df = df.with_columns((pl.col("add") + pl.col("subs") + pl.col("ring") + pl.col("mar") + pl.col("iso") + pl.col("ins") + pl.col("inv") + pl.col("tr") + pl.col("dup") + pl.col("del")).alias("CYTOGEN_COMPLEXITY"))
-    df = df.drop(["CYTOGENETICS", "add", "subs", "ring", "mar", "iso", "ins", "inv", "tr", "dup", "del"])
+    df = df.with_columns((pl.col("add") + pl.col("subs_") + pl.col("ring") + pl.col("der") + pl.col("add_") + pl.col("mar") + pl.col("iso") + pl.col("ins") + pl.col("inv") + pl.col("tr") + pl.col("dup") + pl.col("del")).alias("CYTOGEN_COMPLEXITY"))
+    df = df.drop(["CYTOGENETICS", "add", "add_", "subs_", "ring", "mar", "iso", "ins", "inv", "tr", "dup", "del", "der"])
+
+    columns_to_mult = ["BM_BLAST", "WBC", "ANC", "MONOCYTES", "HB", "PLT"]
+    for c1 in columns_to_mult:
+        for c2 in columns_to_mult:
+            if c1 != c2:
+                df = df.with_columns(((1 + df[c1]).log() * df[c2]).alias(f"log({c1})*{c2}"))
+                df = df.with_columns((df[c1] * df[c2]).alias(f"{c1}*{c2}"))
 
     cont_columns = [c for c in df.columns if df[c].dtype == pl.Float64 or c == "CYTOGEN_COMPLEXITY"]
     disc_columns = [c for c in df.columns if df[c].dtype == pl.Int64 and c != "ID" and c != "CYTOGEN_COMPLEXITY"]
 
     for c in df.columns:
         if c in cont_columns:
-            df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
-            df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
-            df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
+            df = df.with_columns(((df[c] - df[c].mean()) / (df[c].std() )).alias(c))
+            df = df.with_columns(df[c].fill_null(df[c].mean()).alias(c))
+            df = df.with_columns(df[c].fill_nan(df[c].mean()).alias(c))
         elif c in disc_columns:
             df = df.with_columns(df[c].fill_null(0).alias(c))
             df = df.with_columns(df[c].fill_nan(0).alias(c))
@@ -121,9 +130,9 @@ def molecular_data_engineering(path, traindata=True):
             df = df.with_columns(df[c].fill_null(0).alias(c))
             df = df.with_columns(df[c].fill_nan(0).alias(c))
         elif c in cont_columns:
-            df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
-            df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
-            df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
+            df = df.with_columns(((df[c] - df[c].mean()) / (df[c].std() )).alias(c))
+            df = df.with_columns(df[c].fill_null(df[c].mean()).alias(c))
+            df = df.with_columns(df[c].fill_nan(df[c].mean()).alias(c))
         else:
             pass
     return df
