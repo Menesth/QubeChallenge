@@ -17,49 +17,55 @@ ytrain = np.array(
     [(bool(event), time) for event, time in zip(ytraindf["OS_STATUS"], ytraindf["OS_YEARS"])],
     dtype=[("event", "bool"), ("time", "float64")]
 )
-kf = KFold(n_splits=10, shuffle=True, random_state=1337)
+kf = KFold(n_splits=5, shuffle=True, random_state=1337)
 
-n_estimators_list = [100]
-learning_rate_list = [1e-1]
+n_estimators_list = [200]
 max_depth_list = [5]
-min_impurity_decrease_list = [0]
+max_features_list = ["log2"]
+
+dropout_rate_list = [0]
 min_samples_split_list = [2]
 min_samples_leaf_list = [1]
-max_features_list = ["sqrt"]
+
+ccp_alpha_list = [0]
+
+learning_rate_list = [1e-1]
 
 for max_features in max_features_list:
     for learning_rate in learning_rate_list:
         for n_estimators in n_estimators_list:
             for max_depth in max_depth_list:
-                for min_impurity_decrease in min_impurity_decrease_list:
+                for dropout_rate in dropout_rate_list:
                     for min_samples_split in min_samples_split_list:
                         for min_samples_leaf in min_samples_leaf_list:
-                            fold_concordance_indices = []
+                            for ccp_alpha in ccp_alpha_list:
+                                fold_concordance_indices = []
 
-                            for train_idx, val_idx in kf.split(Xtrain):
-                                Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
-                                ytr, yval = ytrain[train_idx], ytrain[val_idx]
+                                for train_idx, val_idx in kf.split(Xtrain):
+                                    Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
+                                    ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
-                                model = GradientBoostingSurvivalAnalysis(
-                                    n_estimators=n_estimators,
-                                    learning_rate=learning_rate,
-                                    max_depth=max_depth,
-                                    min_samples_split=min_samples_split,
-                                    min_samples_leaf=min_samples_leaf,
-                                    max_features=max_features,
-                                    random_state=1337,
+                                    model = GradientBoostingSurvivalAnalysis(
+                                        n_estimators=n_estimators,
+                                        learning_rate=learning_rate,
+                                        max_depth=max_depth,
+                                        min_samples_split=min_samples_split,
+                                        min_samples_leaf=min_samples_leaf,
+                                        dropout_rate=dropout_rate,
+                                        max_features=max_features,
+                                        random_state=1337
+                                    )
+                                    model.fit(Xtr, ytr)
+                                    concordance_index = concordance_index_ipcw(ytr, yval, model.predict(Xval))[0]
+                                    fold_concordance_indices.append(concordance_index)
+                                mean_concordance = np.mean(fold_concordance_indices)
+                                std_concordance = np.std(fold_concordance_indices)
+                                print(
+                                    f"n_estimators = {n_estimators}, max_depth = {max_depth}, learning_rate = {learning_rate}, "
+                                    f"min_samples_split = {min_samples_split}, min_samples_leaf = {min_samples_leaf}, dropout_rate = {dropout_rate}, "
+                                    f"max_features = {max_features}, ccp_alpha = {ccp_alpha}"
                                 )
-                                model.fit(Xtr, ytr)
-                                concordance_index = concordance_index_ipcw(ytr, yval, model.predict(Xval))[0]
-                                fold_concordance_indices.append(concordance_index)
-                            mean_concordance = np.mean(fold_concordance_indices)
-                            std_concordance = np.std(fold_concordance_indices)
-                            print(
-                                f"n_estimators = {n_estimators}, max_depth = {max_depth}, learning_rate = {learning_rate},"
-                                f"min_samples_split = {min_samples_split}, min_samples_leaf = {min_samples_leaf}, min_impurity_decrease = {min_impurity_decrease},"
-                                f"max_features = {max_features}"
-                            )
-                            print(f"Mean Concordance Index = {mean_concordance:.4f}, Std = {std_concordance:.4f}\n")
+                                print(f"Mean = {mean_concordance:.4f}, Std = {std_concordance:.4f}\n")
 
 submit = False
 if submit:
@@ -72,4 +78,4 @@ if submit:
         "ID": id_column,
         "risk_score": ytestpred
     })
-    submission.write_csv("Desktop/QubeChallenge/RSFsubmission.csv")
+    submission.write_csv("Desktop/QubeChallenge/GDSAsubmission.csv")

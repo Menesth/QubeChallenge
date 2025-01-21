@@ -18,7 +18,7 @@ ytrain = np.array(
     dtype=[("event", "bool"), ("time", "float64")]
 )
 
-kf = KFold(n_splits=10, shuffle=True, random_state=1337)
+kf = KFold(n_splits=5, shuffle=True, random_state=1337)
 
 alpha_list = [1e-3]
 ties_list = ["efron"]
@@ -46,7 +46,7 @@ for alpha in alpha_list:
             mean_concordance = np.mean(fold_concordance_indices)
             std_concordance = np.std(fold_concordance_indices)
             print(f"alpha = {alpha}, ties = {ties}, n_iter = {n_iter}")
-            print(f"Mean Concordance Index = {mean_concordance:.4f}, Std = {std_concordance:.4f}\n")
+            print(f"Mean = {mean_concordance:.4f}, Std = {std_concordance:.4f}\n")
 
 submit = False
 if submit:
@@ -59,4 +59,4 @@ if submit:
         "ID": id_column,
         "risk_score": ytestpred
     })
-    submission.write_csv("Desktop/QubeChallenge/submission.csv")
+    submission.write_csv("Desktop/QubeChallenge/CRSAsubmission.csv")
