@@ -1,10 +1,9 @@
 import numpy as np
 import polars as pl
 from sksurv.ensemble import RandomSurvivalForest
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import make_scorer
 
 np.random.seed(1337)
 
@@ -16,20 +15,46 @@ ytrain = np.array(
     [(bool(event), time) for event, time in zip(ytraindf["OS_STATUS"], ytraindf["OS_YEARS"])],
     dtype=[("event", "bool"), ("time", "float64")]
 )
+kf = KFold(n_splits=10, shuffle=True, random_state=1337)
 
-Xtr, Xval, ytr, yval = train_test_split(Xtrain, ytrain, test_size=0.2, random_state=1337)
+n_estimators_list = [100, 200]
+max_depth_list = [10, 20]
+min_samples_split_list = [6, 12]
+min_samples_leaf_list = [3, 6]
+max_features_list = ["sqrt", "log2", 0.8]
 
-for n_estimator in [50, 100, 150]:
-    for max_depth in [5, 10, None]:
-        for min_samples_split in [6]:
-            for min_samples_leaf in [3]:
+for max_features in max_features_list:
+    for n_estimators in n_estimators_list:
+        for max_depth in max_depth_list:
+            for min_samples_split in min_samples_split_list:
+                for min_samples_leaf in min_samples_leaf_list:
+                    fold_concordance_indices = []
 
-                model = RandomSurvivalForest(n_estimators=n_estimator, max_depth=max_depth, min_samples_split=min_samples_split,
-                                            min_samples_leaf=min_samples_leaf, max_features='sqrt', max_leaf_nodes=None, random_state=1337)
-                model.fit(Xtr, ytr)
-                concordance_index = concordance_index_ipcw(ytr, yval, model.predict(Xval))
-                print("n_estimator =", n_estimator, "max_depth =", max_depth, "min_samples_split =", min_samples_split, "min_samples_leaf =", min_samples_leaf)
-                print("Val concordance_index =", concordance_index[0])
+                    for train_idx, val_idx in kf.split(Xtrain):
+                        Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
+                        ytr, yval = ytrain[train_idx], ytrain[val_idx]
+
+                        model = RandomSurvivalForest(
+                            n_estimators=n_estimators,
+                            max_depth=max_depth,
+                            min_samples_split=min_samples_split,
+                            min_samples_leaf=min_samples_leaf,
+                            max_features=max_features,
+                            random_state=1337,
+                        )
+                        model.fit(Xtr, ytr)
+
+                        concordance_index = concordance_index_ipcw(ytr, yval, model.predict(Xval))[0]
+                        fold_concordance_indices.append(concordance_index)
+
+                    mean_concordance = np.mean(fold_concordance_indices)
+                    std_concordance = np.std(fold_concordance_indices)
+                    print(
+                        f"n_estimators = {n_estimators}, max_depth = {max_depth},"
+                        f"min_samples_split = {min_samples_split}, min_samples_leaf = {min_samples_leaf}"
+                        f"max_features = {max_features}"
+                    )
+                    print(f"Mean Concordance Index = {mean_concordance:.4f}, Std = {std_concordance:.4f}\n")
 
 submit = False
 if submit:
