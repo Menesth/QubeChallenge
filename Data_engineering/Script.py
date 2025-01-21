@@ -35,11 +35,12 @@ def clinical_data_engineering(path):
 
     for c in df.columns:
         if c in cont_columns:
-            df = df.with_columns(((df[c] - df[c].min()) / df[c] - df[c].max()).alias(c))
+            df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
             df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
             df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
         elif c in disc_columns:
             df = df.with_columns(df[c].fill_null(0).alias(c))
+            df = df.with_columns(df[c].fill_nan(0).alias(c))
         else:
             pass
     return df
@@ -118,8 +119,9 @@ def molecular_data_engineering(path, traindata=True):
     for c in df.columns:
         if c in disc_columns:
             df = df.with_columns(df[c].fill_null(0).alias(c))
+            df = df.with_columns(df[c].fill_nan(0).alias(c))
         elif c in cont_columns:
-            df = df.with_columns(((df[c] - df[c].min()) / df[c] - df[c].max()).alias(c))
+            df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
             df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
             df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
         else:
@@ -133,6 +135,7 @@ def group_molecular_clinical(df_mol, df_clin):
             pass
         if df[c].dtype == pl.Int64:
             df = df.with_columns(df[c].fill_null(0).alias(c))
+            df = df.with_columns(df[c].fill_nan(0).alias(c))
         if df[c].dtype == pl.Float64:
             df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
             df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))

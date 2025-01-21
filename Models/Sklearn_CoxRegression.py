@@ -9,6 +9,9 @@ np.random.seed(1337)
 Xtraindf = pl.read_csv("Desktop/QubeChallenge/ModifiedData/TrainDataset/Traindataset.csv")
 ytraindf = pl.read_csv("Desktop/QubeChallenge/ModifiedData/TrainDataset/Ytrain.csv")
 
+Xtraindf = Xtraindf.drop("ID")
+ytraindf = ytraindf.drop("ID")
+
 Xtrain = Xtraindf.to_numpy()
 ytrain = np.array(
     [(bool(event), time) for event, time in zip(ytraindf["OS_STATUS"], ytraindf["OS_YEARS"])],
