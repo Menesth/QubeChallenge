@@ -15,10 +15,6 @@ def clinical_data_engineering(path):
     df = df.drop(["CENTER"])
     df = df.with_columns(df["MONOCYTES"].cast(pl.Float64))
 
-    for c in df.columns:
-        if df[c].dtype == pl.Float64:
-            df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
-
     df = df.with_columns([
         (pl.col("CYTOGENETICS").str.contains('del')).cast(pl.Int64).alias("del"),
         (pl.col("CYTOGENETICS").str.contains('dup')).cast(pl.Int64).alias("dup"),
@@ -34,11 +30,16 @@ def clinical_data_engineering(path):
     df = df.with_columns((pl.col("add") + pl.col("subs") + pl.col("ring") + pl.col("mar") + pl.col("iso") + pl.col("ins") + pl.col("inv") + pl.col("tr") + pl.col("dup") + pl.col("del")).alias("CYTOGEN_COMPLEXITY"))
     df = df.drop(["CYTOGENETICS", "add", "subs", "ring", "mar", "iso", "ins", "inv", "tr", "dup", "del"])
 
+    cont_columns = [c for c in df.columns if df[c].dtype == pl.Float64 or c == "CYTOGEN_COMPLEXITY"]
+    disc_columns = [c for c in df.columns if df[c].dtype == pl.Int64 and c != "ID" and c != "CYTOGEN_COMPLEXITY"]
+
     for c in df.columns:
-        if df[c].dtype == pl.Int64:
+        if c in cont_columns:
+            df = df.with_columns(((df[c] - df[c].min()) / df[c] - df[c].max()).alias(c))
+            df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
+            df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
+        elif c in disc_columns:
             df = df.with_columns(df[c].fill_null(0).alias(c))
-        elif df[c].dtype == pl.Float64:
-            df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
         else:
             pass
     return df
@@ -53,8 +54,6 @@ def molecular_data_engineering(path, traindata=True):
         RANGE = 1193 + 1
     df = df.with_columns(df["ID"].str.extract(r'\d+', 0).cast(pl.Int64).alias("ID"))
     df = df.sort("ID")
-    df = df.with_columns(df["VAF"].fill_null(df["VAF"].median()).alias("VAF"))
-    df = df.with_columns(df["DEPTH"].fill_null(df["DEPTH"].median()).alias("DEPTH"))
     df = df.with_columns(((1 + df["DEPTH"]).log()).alias("log(DEPTH)"))
     df = df.with_columns((df["DEPTH"] * df["VAF"]).alias("DEPTH*VAF"))
     df = df.with_columns((df["log(DEPTH)"] * df["VAF"]).alias("log(DEPTH)*VAF"))
@@ -107,9 +106,7 @@ def molecular_data_engineering(path, traindata=True):
         (pl.col("GENE").str.contains(r'STAG2|RAD21|SMC3|SMC1A')).cast(pl.Int64).alias("CCG"),
         ])
     df = df.drop("GENE")
-    for c in df.columns:
-        if df[c].dtype == pl.Int64:
-            df = df.with_columns(df[c].fill_null(0).alias(c))
+
     cont_columns = ["VAF", "DEPTH", "log(DEPTH)", "DEPTH*VAF", "log(DEPTH)*VAF", "MUTATION_LEN"]
     disc_columns = [c for c in df.columns if df[c].dtype == pl.Int64 and c != "ID"]
     
@@ -118,8 +115,15 @@ def molecular_data_engineering(path, traindata=True):
             *[pl.col(col).sum().alias(col) for col in disc_columns]
             ])
     
-    for c in cont_columns:
-        df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
+    for c in df.columns:
+        if c in disc_columns:
+            df = df.with_columns(df[c].fill_null(0).alias(c))
+        elif c in cont_columns:
+            df = df.with_columns(((df[c] - df[c].min()) / df[c] - df[c].max()).alias(c))
+            df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
+            df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
+        else:
+            pass
     return df
 
 def group_molecular_clinical(df_mol, df_clin):
@@ -131,6 +135,7 @@ def group_molecular_clinical(df_mol, df_clin):
             df = df.with_columns(df[c].fill_null(0).alias(c))
         if df[c].dtype == pl.Float64:
             df = df.with_columns(df[c].fill_null(df[c].median()).alias(c))
+            df = df.with_columns(df[c].fill_nan(df[c].median()).alias(c))
     return df
 
 SAVE = True
