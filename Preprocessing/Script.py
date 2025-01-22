@@ -1,4 +1,5 @@
 import polars as pl
+import numpy as np
 
 def preprocessing(clinicalpath, molecularpath):
     clinicaldf = pl.read_csv(clinicalpath)
@@ -28,9 +29,9 @@ def preprocessing(clinicalpath, molecularpath):
     # Frequency encoding for high-cardinality categorical columns
     clinicaldf = clinicaldf.with_columns(((pl.len().over("CYTOGENETICS")) / (pl.len())).alias("CYTOGENETICS"))
     for c in ["PROTEIN_CHANGE", "GENE", "ALT", "REF"]:
-        moleculardf = moleculardf.with_columns(((pl.len().over(c)) / (pl.len())).alias(c))
+        moleculardf = moleculardf.with_columns(((pl.len().over(c)) / (pl.len())).cast(pl.Int64).alias(c))
 
-    # Frequency encoding for low-cardinality categorical columns
+    # one-hot encoding for low-cardinality categorical columns
     def one_hot_encoding_(df, column_to_one_hot, possible_strings):
         for s in possible_strings:
             df = df.with_columns((df[column_to_one_hot] == s).cast(pl.Int64).alias(f"{column_to_one_hot}_{s}"))
@@ -57,5 +58,15 @@ def preprocessing(clinicalpath, molecularpath):
             outdf = outdf.with_columns(outdf[c].fill_null(0).alias(c))
         else:
             pass
-
     return outdf
+
+def normalize(df):
+    for c in df.columns:
+        if df[c].dtype == pl.Float64:
+            df = df.with_columns(((df[c] - df[c].mean()) / df[c].std()).alias(c))
+        elif df[c].dtype == pl.Int64:
+            if df[c].max() != 0:
+                df = df.with_columns(((df[c] - df[c].min()) / (df[c].max() - df[c].min())).alias(c))
+        else:
+            pass
+    return df
