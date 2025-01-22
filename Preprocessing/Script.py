@@ -11,47 +11,22 @@ def clinicaldf_preprocessing(clinicalpath):
     clinicaldf = clinicaldf.drop(["CENTER"])
     clinicaldf = clinicaldf.with_columns(clinicaldf["MONOCYTES"].cast(pl.Float64).alias("MONOCYTES"))
 
-    # Handling missing values
-    for c in clinicaldf.columns:
-        if clinicaldf[c].dtype == pl.String:
-            clinicaldf = clinicaldf.with_columns(clinicaldf[c].fill_null("unknown").alias(c))
-        elif clinicaldf[c].dtype == pl.Float64:
-            clinicaldf = clinicaldf.with_columns((clinicaldf[c].fill_null(clinicaldf[c].median())).alias(c))
-        else:
-            pass
-
-    # New features
-    clinicaldf = clinicaldf.with_columns((clinicaldf["BM_BLAST"] / (clinicaldf["BM_BLAST"] + clinicaldf["PLT"])).alias(f"BM_BLAST/PLT_RATIO"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["BM_BLAST"] / (clinicaldf["BM_BLAST"] + clinicaldf["HB"])).alias(f"BM_BLAST/HB_RATIO"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["WBC"] / (clinicaldf["WBC"] + clinicaldf["PLT"])).alias(f"WBC/PLT_RATIO"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["HB"] / (clinicaldf["HB"] + clinicaldf["BM_BLAST"])).alias(f"HB/BM_BLAST_RATIO"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["PLT"] / (clinicaldf["PLT"] + clinicaldf["BM_BLAST"])).alias(f"PLT/BM_BLAST_RATIO"))
-
     # Encoding CYTOGENETICS
     clinicaldf = clinicaldf.with_columns((pl.col("CYTOGENETICS").str.contains(r"46,(xy|xx|XX|XY)").cast(pl.Int64)).alias("Normal_count"))
     clinicaldf = clinicaldf.with_columns(
     pl.when(pl.col("CYTOGENETICS").str.contains(r"abnormal|del|iso|inv|add|order|dert|mar|der|complex|dic|inc|idem|t"))
-    .then(pl.col("CYTOGENETICS").str.len_chars())
-    .otherwise(0)
-    .cast(pl.Int64)
-    .alias("Abnormality_Length")
-    )
+    .then(pl.col("CYTOGENETICS").str.len_chars()).otherwise(0).cast(pl.Int64).alias("Abnormality_Length"))
 
-    clinicaldf = clinicaldf.drop(["CYTOGENETICS", "BM_BLAST"])
+    clinicaldf = clinicaldf.drop(["CYTOGENETICS"])
+
+    for c in clinicaldf.columns:
+        if clinicaldf[c].dtype==pl.Float64:
+            clinicaldf = clinicaldf.with_columns((clinicaldf[c].fill_null(clinicaldf[c].median())).alias(c))
 
     return clinicaldf
 
 def moleculardf_preprocessing(molecularpath):
     moleculardf = pl.read_csv(molecularpath, schema_overrides={"CHR": pl.Utf8})
-
-    # Handling missing values
-    for c in moleculardf.columns:
-        if moleculardf[c].dtype == pl.String:
-            moleculardf = moleculardf.with_columns(moleculardf[c].fill_null("unknown").alias(c))
-        elif moleculardf[c].dtype == pl.Float64:
-            moleculardf = moleculardf.with_columns((moleculardf[c].fill_null(moleculardf[c].median())).alias(c))
-        else:
-            pass
 
     # create features
     moleculardf = moleculardf.with_columns((moleculardf["END"] - moleculardf["START"]).cast(pl.Int64).alias("MUT_LEN"))
@@ -73,21 +48,15 @@ def moleculardf_preprocessing(molecularpath):
         *[pl.col(c).max().alias(c) for c in moleculardf.columns if moleculardf[c].dtype == pl.Int64]
         )
 
+    # Handling missing values
+    for c in moleculardf.columns:
+        if moleculardf[c].dtype == pl.Float64:
+            moleculardf = moleculardf.with_columns((moleculardf[c].fill_null(moleculardf[c].median())).alias(c))
+
     return moleculardf
 
 def get_dataset(clinicalpath, molecularpath):
     clinicaldf = clinicaldf_preprocessing(clinicalpath)
     moleculardf = moleculardf_preprocessing(molecularpath)
     joint_df = clinicaldf.join(moleculardf, on="ID", how="left")
-    for c in joint_df.columns:
-        if joint_df[c].dtype==pl.Float64:
-            joint_df = joint_df.with_columns(((joint_df[c] - joint_df[c].mean()) / joint_df[c].std()).alias(c))
-            joint_df = joint_df.with_columns((joint_df[c].fill_null(0.0)).alias(c))
-            joint_df = joint_df.with_columns((joint_df[c].fill_null(0.0)).alias(c))
-        elif joint_df[c].dtype==pl.Int64:
-            joint_df = joint_df.with_columns((joint_df[c].fill_null(0)).alias(c))
-            joint_df = joint_df.with_columns((joint_df[c].fill_null(0)).alias(c))
-        else:
-            pass
-
     return joint_df

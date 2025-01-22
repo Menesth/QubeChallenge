@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 import polars as pl
-from sksurv.linear_model import CoxPHSurvivalAnalysis
+from sksurv.ensemble import RandomSurvivalForest
 from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 
@@ -38,10 +38,15 @@ for train_idx, val_idx in kf.split(Xtrain):
     Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
     ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
-    model = CoxPHSurvivalAnalysis(
-        alpha=1e-3,
-        ties="efron"
+    model = RandomSurvivalForest(
+        n_estimators=100,
+        max_depth=8,
+        max_features=0.7,
+        max_samples=0.7,
+        n_jobs=-1,
+        random_state=1337
     )
+
     model.fit(Xtr, ytr)
     predicted_risk_tr = model.predict(Xtr)
     predicted_risk_val = model.predict(Xval)
