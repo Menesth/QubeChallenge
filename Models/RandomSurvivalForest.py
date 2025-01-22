@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 import polars as pl
-from sksurv.ensemble import RandomSurvivalForest
+from sksurv.linear_model import CoxPHSurvivalAnalysis
 from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 
@@ -17,11 +17,9 @@ ids_to_keep = ytraindf.filter(~pl.col("OS_YEARS").is_null() & ~pl.col("OS_STATUS
 Xtrain_df = Xtrain_df.filter(pl.col("ID").is_in(ids_to_keep))
 ytraindf = ytraindf.filter(pl.col("ID").is_in(ids_to_keep))
 
-# drop ID column
 Xtrain_df = Xtrain_df.drop("ID")
 ytraindf = ytraindf.drop("ID")
 
-# get numpy arrays
 Xtrain = Xtrain_df.to_numpy()
 ytrain = np.array(
     [(bool(event), time) for event, time in zip(ytraindf["OS_STATUS"], ytraindf["OS_YEARS"])],
@@ -38,13 +36,8 @@ for train_idx, val_idx in kf.split(Xtrain):
     Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
     ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
-    model = RandomSurvivalForest(
-        n_estimators=100,
-        max_depth=8,
-        max_features=0.7,
-        max_samples=0.7,
-        n_jobs=-1,
-        random_state=1337
+    model = CoxPHSurvivalAnalysis(
+        alpha=1e-3
     )
 
     model.fit(Xtr, ytr)
