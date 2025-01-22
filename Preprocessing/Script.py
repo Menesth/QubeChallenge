@@ -18,7 +18,7 @@ def clinicaldf_preprocessing(clinicalpath):
 
 def moleculardf_preprocessing(molecularpath):
     moleculardf = pl.read_csv(molecularpath, schema_overrides={"CHR": pl.Utf8})
-    moleculardf = moleculardf.with_columns((moleculardf["END"] - moleculardf["START"]).cast(pl.Float64).alias("MUT_LEN"))
+    #moleculardf = moleculardf.with_columns((moleculardf["END"] - moleculardf["START"]).cast(pl.Float64).alias("MUT_LEN"))
     moleculardf = moleculardf.drop(["CHR", "START", "END", "REF", "ALT", "GENE", "PROTEIN_CHANGE", "EFFECT"])
     for c in moleculardf.columns:
         if moleculardf[c].dtype == pl.Float64:
