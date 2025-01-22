@@ -7,10 +7,9 @@ from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 
 sys.path.append(os.path.abspath("Desktop/QubeChallenge/Preprocessing"))
-from Script import preprocessing, normalize # type: ignore
+from Script import get_dataset # type: ignore
 
-Xtrain_df = preprocessing("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv", "Desktop/QubeChallenge/RawData/TrainDataset/Trainmolecular.csv")
-Xtrain_df = normalize(Xtrain_df)
+Xtrain_df = get_dataset("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv", "Desktop/QubeChallenge/RawData/TrainDataset/Trainmolecular.csv")
 ytraindf = pl.read_csv("Desktop/QubeChallenge/RawData/TrainDataset/Ytrain.csv")
 
 # cleaning: ytraindf has few empty rows
@@ -31,7 +30,7 @@ ytrain = np.array(
 
 # k-fold cross validation
 np.random.seed(1337)
-kf = KFold(n_splits=10, shuffle=True, random_state=1337)
+kf = KFold(n_splits=5, shuffle=True, random_state=1337)
 
 fold_concordance_indices_tr = []
 fold_concordance_indices_val = []
@@ -40,17 +39,9 @@ for train_idx, val_idx in kf.split(Xtrain):
     ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
     model = GradientBoostingSurvivalAnalysis(
-        learning_rate=0.5,
         n_estimators=100,
-        subsample=0.8,
-        min_samples_split=4,
-        min_samples_leaf=2,
-        max_depth=5,
-        random_state=1337,
-        max_features=0.8,
-        dropout_rate=0.2
+        random_state=1337
     )
-
     model.fit(Xtr, ytr)
     predicted_risk_tr = model.predict(Xtr)
     predicted_risk_val = model.predict(Xval)
