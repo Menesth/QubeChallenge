@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 import polars as pl
-from sksurv.ensemble import RandomSurvivalForest
+from sksurv.ensemble import GradientBoostingSurvivalAnalysis
 from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 
@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath("Desktop/QubeChallenge/Preprocessing"))
 from Script import get_dataset # type: ignore
 
 Xtrain_df = get_dataset("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv", "Desktop/QubeChallenge/RawData/TrainDataset/Trainmolecular.csv")
+#Xtrain_df = clinicaldf_preprocessing("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv")
 ytraindf = pl.read_csv("Desktop/QubeChallenge/RawData/TrainDataset/Ytrain.csv")
 
 # cleaning: ytraindf has few empty rows
@@ -26,6 +27,11 @@ ytrain = np.array(
     dtype=[("event", "bool"), ("time", "float64")]
 )
 
+print(f"Nb features = {len(Xtrain_df.columns)}")
+#for c in Xtrain_df.columns:
+#    print(c, Xtrain_df[c].dtype)
+#exit()
+
 # k-fold cross validation
 np.random.seed(1337)
 kf = KFold(n_splits=5, shuffle=True, random_state=1337)
@@ -36,7 +42,8 @@ for train_idx, val_idx in kf.split(Xtrain):
     Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
     ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
-    model = RandomSurvivalForest(
+    model = GradientBoostingSurvivalAnalysis(
+                        random_state=1337
                         )
 
     model.fit(Xtr, ytr)
