@@ -7,7 +7,7 @@ from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 
 sys.path.append(os.path.abspath("Desktop/QubeChallenge/Preprocessing"))
-from Script import get_dataset # type: ignore
+from Script import clinicaldf_preprocessing, get_dataset # type: ignore
 
 Xtrain_df = get_dataset("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv", "Desktop/QubeChallenge/RawData/TrainDataset/Trainmolecular.csv")
 #Xtrain_df = clinicaldf_preprocessing("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv")

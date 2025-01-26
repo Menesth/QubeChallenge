@@ -13,14 +13,21 @@ def clinicaldf_preprocessing(clinicalpath):
     clinicaldf = clinicaldf.with_columns([pl.when(pl.col("CYTOGENETICS").str.contains(r'^(?:46,xx(?:\[\d+\])?|46,xy(?:\[\d+\])?)$')).then(pl.lit("Normal")).otherwise(pl.col("CYTOGENETICS")).alias("CYTOGENETICS")])
     clinicaldf = clinicaldf.with_columns([pl.when(pl.col("CYTOGENETICS").str.contains("plex")).then(pl.lit("Complex")).otherwise(pl.col("CYTOGENETICS")).alias("CYTOGENETICS")])
 
-    high_risk_patterns = [r"-7", r"t\(9;22\)", r"Complex"]
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("Complex").cast(pl.Int64)).alias("is_complex"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("Normal").cast(pl.Int64)).alias("is_normal"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("der").cast(pl.Int64)).alias("der"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("t").cast(pl.Int64)).alias("t"))
+
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-2|\+2").cast(pl.Int64)).alias("2"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-3|\+3").cast(pl.Int64)).alias("3"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-6|\+6").cast(pl.Int64)).alias("6"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-7|\+7").cast(pl.Int64)).alias("7"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-22|\+22").cast(pl.Int64)).alias("22"))
+
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.count_matches(",").cast(pl.Int64)).alias("num_abnormalities"))
-    clinicaldf = clinicaldf.with_columns(pl.col("CYTOGENETICS").str.contains("|".join(high_risk_patterns)).cast(pl.Int64).alias("high_risk"))
 
     clinicaldf = clinicaldf.drop(["CENTER", "CYTOGENETICS"])
-    
+
     for c in clinicaldf.columns:
         if clinicaldf[c].dtype==pl.Float64:
             clinicaldf = clinicaldf.with_columns((clinicaldf[c].fill_null(clinicaldf[c].median())).alias(c))
@@ -51,6 +58,9 @@ def moleculardf_preprocessing(molecularpath):
     moleculardf = moleculardf.with_columns((moleculardf["EFFECT"].str.contains("ITD|PTD").cast(pl.Int64)).alias("TD"))
 
     moleculardf = moleculardf.with_columns((moleculardf["GENE"].str.contains("FLT").cast(pl.Int64)).alias("FLT"))
+    moleculardf = moleculardf.with_columns((moleculardf["GENE"].str.contains("TET").cast(pl.Int64)).alias("TET"))
+    moleculardf = moleculardf.with_columns((moleculardf["GENE"].str.contains("JAK").cast(pl.Int64)).alias("JAK"))
+    moleculardf = moleculardf.with_columns((moleculardf["GENE"].str.contains("ZRSR").cast(pl.Int64)).alias("ZRSR"))
     moleculardf = moleculardf.with_columns((moleculardf["GENE"].str.contains("TET").cast(pl.Int64)).alias("TET"))
 
     moleculardf = moleculardf.with_columns((moleculardf["PROTEIN_CHANGE"].str.contains("Q").cast(pl.Int64)).alias("Q"))
