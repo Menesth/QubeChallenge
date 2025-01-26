@@ -17,7 +17,6 @@ def clinicaldf_preprocessing(clinicalpath):
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("Normal").cast(pl.Int64)).alias("is_normal"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("der").cast(pl.Int64)).alias("der"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("t").cast(pl.Int64)).alias("t"))
-
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-2|\+2").cast(pl.Int64)).alias("2"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-3|\+3").cast(pl.Int64)).alias("3"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-6|\+6").cast(pl.Int64)).alias("6"))
@@ -27,6 +26,9 @@ def clinicaldf_preprocessing(clinicalpath):
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.count_matches(",").cast(pl.Int64)).alias("num_abnormalities"))
 
     clinicaldf = clinicaldf.drop(["CENTER", "CYTOGENETICS"])
+
+    clinicaldf = clinicaldf.with_columns((clinicaldf["ANC"] / (clinicaldf["ANC"] + clinicaldf["HB"])).alias("ANC/HB"))
+    clinicaldf = clinicaldf.with_columns((clinicaldf["PLT"] / (clinicaldf["PLT"] + clinicaldf["HB"])).alias("PLT/HB"))
 
     for c in clinicaldf.columns:
         if clinicaldf[c].dtype==pl.Float64:
@@ -51,6 +53,8 @@ def moleculardf_preprocessing(molecularpath):
     moleculardf = moleculardf.with_columns((moleculardf["CHR"].str.contains("21").cast(pl.Int64)).alias("CHR21"))
     moleculardf = moleculardf.with_columns((moleculardf["CHR"].str.contains("22").cast(pl.Int64)).alias("CHR22"))
     
+    moleculardf = moleculardf.with_columns((moleculardf["ALT"].str.contains("A").cast(pl.Int64)).alias("ALT_A"))
+    
     moleculardf = moleculardf.with_columns((moleculardf["EFFECT"].str.contains("stop").cast(pl.Int64)).alias("S"))
     moleculardf = moleculardf.with_columns((moleculardf["EFFECT"].str.contains("frameshift_variant").cast(pl.Int64)).alias("FV"))
     moleculardf = moleculardf.with_columns((moleculardf["EFFECT"].str.contains("non_synonymous_codon").cast(pl.Int64)).alias("NSC"))
@@ -66,7 +70,7 @@ def moleculardf_preprocessing(molecularpath):
     moleculardf = moleculardf.with_columns((moleculardf["PROTEIN_CHANGE"].str.contains("Q").cast(pl.Int64)).alias("Q"))
     moleculardf = moleculardf.with_columns((moleculardf["PROTEIN_CHANGE"].str.contains("H").cast(pl.Int64)).alias("H"))
     moleculardf = moleculardf.with_columns((moleculardf["PROTEIN_CHANGE"].str.contains("L").cast(pl.Int64)).alias("L"))
-    
+
     moleculardf = moleculardf.drop(["CHR", "REF", "ALT", "GENE", "PROTEIN_CHANGE", "EFFECT"])
     
     for c in moleculardf.columns:
@@ -93,6 +97,10 @@ def get_dataset(clinicalpath, molecularpath):
     joint_df = joint_df.with_columns((joint_df["VAF"] * joint_df["WBC"]).alias("VAF*WBC"))
     joint_df = joint_df.with_columns((joint_df["VAF"] * joint_df["HB"]).alias("VAF*HB"))
     joint_df = joint_df.with_columns((joint_df["DEPTH"] * joint_df["BM_BLAST"]).alias("DEPTH*BM_BLAST"))
+
+    joint_df = joint_df.with_columns((joint_df["ANC"] / (joint_df["ANC"] + joint_df["DEPTH"])).alias("ANC/DEPTH"))
+    joint_df = joint_df.with_columns((joint_df["PLT"] / (joint_df["PLT"] + joint_df["VAF"])).alias("PLT/VAF"))
+    joint_df = joint_df.with_columns((joint_df["PLT"] / (joint_df["PLT"] + joint_df["DEPTH"])).alias("PLT/DEPTH"))
 
     for c in joint_df.columns:
         if joint_df[c].dtype == pl.Float64:
