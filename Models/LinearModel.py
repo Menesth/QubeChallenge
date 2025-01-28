@@ -2,15 +2,14 @@ import sys
 import os
 import numpy as np
 import polars as pl
-from sksurv.ensemble import GradientBoostingSurvivalAnalysis
+from sksurv.linear_model import CoxPHSurvivalAnalysis
 from sklearn.model_selection import KFold
 from sksurv.metrics import concordance_index_ipcw
 
 sys.path.append(os.path.abspath("Desktop/QubeChallenge/Preprocessing"))
-from GradientBoosting_Script import clinicaldf_preprocessing, get_dataset # type: ignore
+from LinearModel_Script import get_dataset # type: ignore
 
 Xtrain_df = get_dataset("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv", "Desktop/QubeChallenge/RawData/TrainDataset/Trainmolecular.csv")
-#Xtrain_df = clinicaldf_preprocessing("Desktop/QubeChallenge/RawData/TrainDataset/Trainclinical.csv")
 ytraindf = pl.read_csv("Desktop/QubeChallenge/RawData/TrainDataset/Ytrain.csv")
 
 # cleaning: ytraindf has few empty rows
@@ -42,18 +41,9 @@ for train_idx, val_idx in kf.split(Xtrain):
     Xtr, Xval = Xtrain[train_idx], Xtrain[val_idx]
     ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
-    model = GradientBoostingSurvivalAnalysis(
-                                            learning_rate=75e-3,
-                                            n_estimators=150,
-                                            max_depth=4,
-                                            #subsample=1,
-                                            #max_features="log2",
-                                            #min_samples_split=2,
-                                            #min_samples_leaf=1,
-                                            #dropout_rate=0,
-                                            #ccp_alpha=0,
-                                            random_state=1337
-                                            )
+    model = CoxPHSurvivalAnalysis(
+                            alpha = 1e-5
+                                    )
 
     model.fit(Xtr, ytr)
     predicted_risk_tr = model.predict(Xtr)
