@@ -3,7 +3,7 @@ import re
 
 def one_hot_encoding_(df, column_to_one_hot, possible_strings):
     for s in possible_strings:
-        df = df.with_columns((df[column_to_one_hot] == s).cast(pl.Int64).alias(f"{column_to_one_hot}_{s}"))
+        df = df.with_columns((df[column_to_one_hot]==s).cast(pl.Int64).alias(f"{column_to_one_hot}_{s}"))
     df = df.drop(column_to_one_hot)
     return df
 
