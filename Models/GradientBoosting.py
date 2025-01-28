@@ -43,13 +43,13 @@ for train_idx, val_idx in kf.split(Xtrain):
     ytr, yval = ytrain[train_idx], ytrain[val_idx]
 
     model = GradientBoostingSurvivalAnalysis(
-                                            learning_rate=0.1,
-                                            n_estimators=200,
+                                            learning_rate=75e-3,
+                                            n_estimators=150,
                                             max_depth=4,
                                             #subsample=1,
-                                            max_features="log2",
-                                            min_samples_split=5,
-                                            min_samples_leaf=1,
+                                            #max_features="log2",
+                                            #min_samples_split=2,
+                                            #min_samples_leaf=1,
                                             #dropout_rate=0,
                                             #ccp_alpha=0,
                                             random_state=1337
@@ -63,8 +63,6 @@ for train_idx, val_idx in kf.split(Xtrain):
     concordance_index_val = concordance_index_ipcw(ytr, yval, predicted_risk_val, tau=7)[0]
     fold_concordance_indices_tr.append(concordance_index_tr)
     fold_concordance_indices_val.append(concordance_index_val)
-
-    tot_pred.append(predicted_risk_val)
 
 mean_concordance_tr = np.mean(fold_concordance_indices_tr)
 std_concordance_tr = np.std(fold_concordance_indices_tr)

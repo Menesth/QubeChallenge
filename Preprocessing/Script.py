@@ -1,4 +1,5 @@
 import polars as pl
+import re
 
 def one_hot_encoding_(df, column_to_one_hot, possible_strings):
     for s in possible_strings:
@@ -13,17 +14,26 @@ def clinicaldf_preprocessing(clinicalpath):
     clinicaldf = clinicaldf.with_columns([pl.when(pl.col("CYTOGENETICS").str.contains(r'^(?:46,xx(?:\[\d+\])?|46,xy(?:\[\d+\])?)$')).then(pl.lit("Normal")).otherwise(pl.col("CYTOGENETICS")).alias("CYTOGENETICS")])
     clinicaldf = clinicaldf.with_columns([pl.when(pl.col("CYTOGENETICS").str.contains("plex")).then(pl.lit("Complex")).otherwise(pl.col("CYTOGENETICS")).alias("CYTOGENETICS")])
 
+    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.count_matches(",").cast(pl.Int64)).alias("numb_abnormalities"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("Complex").cast(pl.Int64)).alias("is_complex"))
     clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("Normal").cast(pl.Int64)).alias("is_normal"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("der").cast(pl.Int64)).alias("der"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains("t").cast(pl.Int64)).alias("t"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-2|\+2").cast(pl.Int64)).alias("2"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-3|\+3").cast(pl.Int64)).alias("3"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-6|\+6").cast(pl.Int64)).alias("6"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-7|\+7").cast(pl.Int64)).alias("7"))
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.contains(r"-22|\+22").cast(pl.Int64)).alias("22"))
 
-    clinicaldf = clinicaldf.with_columns((clinicaldf["CYTOGENETICS"].str.count_matches(",").cast(pl.Int64)).alias("num_abnormalities"))
+    risky_cyto = [
+    "inv(3)(q21q26.2)",
+    "t(3;3)(q21;q26.2)",
+    "t(6;9)(p23;q34.1)",
+    "t(9;22)(q34.1;q11.2)",
+    "t(9;11)(p21.3;q23.3)",
+    "t(10;11)(p11.2;q23.3)",
+    "t(11;19)(q23.3;p13.1)",  
+    "-5",
+    "del(5q)",
+    "-7",
+    "-17",
+    "abn(17p)"]
+    escaped_risky_cyto = [re.escape(x) for x in risky_cyto]
+    risky_pattern = "|".join(escaped_risky_cyto)
+    clinicaldf = clinicaldf.with_columns((pl.col("CYTOGENETICS").str.count_matches(risky_pattern)).cast(pl.Int64).alias("risky"))
 
     clinicaldf = clinicaldf.drop(["CENTER", "CYTOGENETICS"])
 
